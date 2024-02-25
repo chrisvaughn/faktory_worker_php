@@ -2,10 +2,10 @@
 
 use PHPUnit\Framework\TestCase;
 use FaktoryQueue\FaktoryClient;
+use FaktoryQueue\FaktoryWorker;
 use FaktoryQueue\SocketMock;
 
-use function PHPUnit\Framework\assertNotTrue;
-use function PHPUnit\Framework\assertTrue;
+
 
 class FaktoryClientTest extends TestCase
 {
@@ -14,7 +14,7 @@ class FaktoryClientTest extends TestCase
     protected function setUp(): void
     {
         $this->client = new FaktoryClient(SocketMock::class, 'localhost', 'port', 'password');
-        $this->client->getSocket()->setReadResponses(array("+HI {\"v\":2}\r\n"));
+        $this->client->getSocket()->setReadResponses(array("+HI {\"v\":2}\r\n", "+OK\r\n"));
         $this->client->connect();
     }
 
@@ -111,5 +111,38 @@ class FaktoryClientTest extends TestCase
 
         $response = $this->client->fetch();
         $this->assertNotTrue($response);
+    }
+
+    public function testHeartBeat(): void
+    {
+        // call on non-worker client
+        $response = $this->client->heartbeat();
+        $this->assertNotTrue($response);
+
+        $worker = new FaktoryWorker($this->client);
+
+        // invalid request
+        $this->client->getSocket()->setReadResponses(array("\+ERR Bad rss_kb\r\n"));
+        $response = $this->client->heartbeat();
+        $this->assertNotTrue($response);
+
+        // invalid response
+        $this->client->getSocket()->setReadResponses(array("\$OK\r\n"));
+        $response = $this->client->heartbeat();
+        $this->assertNotTrue($response);
+
+        // valid response - no state
+        $this->client->getSocket()->setReadResponses(array("+OK\r\n"));
+        $response = $this->client->heartbeat();
+        $this->assertTrue($response);
+
+        //valid response - state quiet
+        $this->client->getSocket()->setReadResponses(array("\$17\r\n", '{"state":"quiet"}'));
+        $response = $this->client->heartbeat();
+        $this->assertEquals("quiet", $response["state"]);
+
+        $this->client->getSocket()->setReadResponses(array("\$17\r\n", '{"state":"terminate"}'));
+        $response = $this->client->heartbeat();
+        $this->assertEquals("terminate", $response["state"]);
     }
 }
