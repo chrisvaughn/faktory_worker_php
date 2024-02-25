@@ -100,5 +100,5 @@ $worker->register('cooljob2', function($job) {
     echo "This is cooler: ".$job['args'][0].' '.$job['args'][1]."\n";
 });
 
-$worker->run(true);
+$worker->run();
 ```
