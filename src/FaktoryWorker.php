@@ -4,11 +4,13 @@ namespace FaktoryQueue;
 
 class FaktoryWorker
 {
-    private $client;
-    private $queues;
-    private $jobTypes = [];
-    private $stop = false;
+    private FaktoryClient $client;
+    private array $queues;
+    private array $jobTypes = [];
     private $id = null;
+    private $sendHeartbeatEvery = 15; # seconds
+    private $lastHeartbeat;
+    private $currentState = "";
 
     public function __construct($client, $processId = null)
     {
@@ -16,6 +18,7 @@ class FaktoryWorker
         $this->queues = array('default');
         $this->id = $processId ?: substr(sha1(rand()), 0, 8);
         $this->client->setWorker($this);
+        $this->lastHeartbeat = time();
     }
 
     public function getID()
@@ -33,9 +36,24 @@ class FaktoryWorker
         $this->jobTypes[$jobType] = $callable;
     }
 
-    public function run($daemonize = false)
+    public function run()
     {
         do {
+            if ($this->shouldSendHeartbeat()) {
+                $response = $this->client->heartbeat($this->currentState);
+                if ($response !== false) {
+                    $this->lastHeartbeat = time();
+                }
+
+                if (is_array($response) && array_key_exists("state", $response)) {
+                    $this->currentState = $response["state"];
+                }
+            }
+
+            if (!$this->shouldFetch()) {
+                continue;
+            }
+
             $job = $this->client->fetch($this->queues);
 
             if ($job) {
@@ -49,7 +67,20 @@ class FaktoryWorker
                 }
             }
 
-            usleep(100);
-        } while ($daemonize && !$this->stop);
+            usleep(250);
+        } while ($this->currentState !== "terminate");
+
+        $this->client->end();
+        $this->client->close();
+    }
+
+    private function shouldFetch(): bool
+    {
+        return $this->currentState == "";
+    }
+
+    private function shouldSendHeartbeat(): bool
+    {
+        return time() > $this->lastHeartbeat + $this->sendHeartbeatEvery;
     }
 }
