@@ -118,12 +118,17 @@ class FaktoryClient
 
         $response = $this->readLine();
         $requestDefaults = [
-            'v' => 2
+            'v' => 2,
+            'hostname' => gethostname(),
+            'pid' => getmypid()
         ];
 
         // If the client is a worker, send the wid with request
         if ($this->worker) {
-            $requestDefaults = array_merge(['wid' => $this->worker->getID()], $requestDefaults);
+            $requestDefaults = array_merge([
+                'wid' => $this->worker->getID(),
+                'labels' => $this->worker->getLabels()
+            ], $requestDefaults);
         }
 
         if (strpos($response, "\"s\":") !== false && strpos($response, "\"i\":") !== false) {

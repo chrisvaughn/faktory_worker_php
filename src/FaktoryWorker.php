@@ -11,19 +11,26 @@ class FaktoryWorker
     private $sendHeartbeatEvery = 15; # seconds
     private $lastHeartbeat;
     private $currentState = "";
+    private $labels;
 
-    public function __construct($client, $processId = null)
+    public function __construct($client, $processId = null, $labels = array())
     {
         $this->client = $client;
         $this->queues = array('default');
         $this->id = $processId ?: substr(sha1(rand()), 0, 8);
         $this->client->setWorker($this);
         $this->lastHeartbeat = time();
+        $this->labels = $labels;
     }
 
     public function getID()
     {
         return $this->id;
+    }
+
+    public function getLabels()
+    {
+        return $this->labels;
     }
 
     public function setQueues($queues)
