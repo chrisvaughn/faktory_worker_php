@@ -28,7 +28,7 @@ class Socket
     {
         $contents = fgets($this->socket, 1024);
         while (strpos($contents, "\r\n") === false) {
-            $contents .= fgets($this->socket, 1024 - strlen($contents));
+            $contents .= fgets($this->socket, 1024);
         }
         return $contents;
     }

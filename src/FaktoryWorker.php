@@ -69,7 +69,7 @@ class FaktoryWorker
                 try {
                     call_user_func($callable, $job);
                     $this->client->ack($job['jid']);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $this->client->fail($job['jid']);
                 }
             }
