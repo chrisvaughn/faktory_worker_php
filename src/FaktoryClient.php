@@ -22,7 +22,7 @@ class FaktoryClient
         $this->faktoryPort = $port;
         $this->faktoryPassword = $password;
         $this->worker = null;
-        $this->socket = new $socketImpl("tcp://{$this->faktoryHost}:{$this->faktoryPort}", 30);
+        $this->socket = new $socketImpl("tcp://{$this->faktoryHost}:{$this->faktoryPort}", 10);
         $this->connectionState = Disconnected;
         $this->debug = $debug;
     }
