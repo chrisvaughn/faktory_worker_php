@@ -18,6 +18,7 @@ class Socket
     public function connect()
     {
         $this->socket = stream_socket_client($this->connString, $errno, $errstr, $this->timeout);
+        stream_set_timeout($this->socket, $this->timeout);
         if (!$this->socket) {
             echo "$errstr ($errno)\n";
             throw new \Exception("Error Creating Socket: " . $errstr . "(" . $errno . ")", 1);
@@ -29,6 +30,10 @@ class Socket
         $contents = fgets($this->socket, 1024);
         while (strpos($contents, "\r\n") === false) {
             $contents .= fgets($this->socket, 1024);
+            $info = stream_get_meta_data($this->socket);
+            if ($info["timed_out"] || $info["eof"]) {
+                throw new \Exception("socket read error");
+            }
         }
         return $contents;
     }
